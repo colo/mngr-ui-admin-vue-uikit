@@ -45,9 +45,9 @@ export default {
                 params: {
                   path: 'all',
                   query: {
-                  'from': 'educativa',
-                  "index": "host",
-                   "filter": [
+                    'from': 'educativa',
+                    'index': 'host',
+                    'filter': [
                       "r.row('metadata')('tag').contains('enabled').and('nginx').and('vhost')",
                       "r.row('data')('code').gt(399)",
                       "r.row('metadata')('path').eq('educativa.checks.vhosts')",
