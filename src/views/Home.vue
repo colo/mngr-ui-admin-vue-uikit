@@ -25,6 +25,8 @@ export default {
   //   HelloWorld
   // }
 
+  pipelines: {},
+  __pipelines_cfg: {},
   data () {
     return {
       height: '0px',
@@ -41,7 +43,7 @@ export default {
         'all': [{
           source: {
             requests: {
-              once: [{
+              periodical: [{
                 params: {
                   path: 'all',
                   query: {
@@ -71,34 +73,49 @@ export default {
     * @start pipelines
     **/
     create_pipelines: function (next) {
-      debug('create_pipelines')
+      debug('create_pipelines %o', this.$options.pipelines)
 
-      let template = Object.clone(RootPipeline)
+      if (this.$options.pipelines['input.root'] && this.$options.pipelines['input.root'].get_input_by_id('input.root')) {
+        // let requests = this.__components_sources_to_requests(this.components)
+        // if (requests.once) {
+        //   this.$options.pipelines['input.root'].get_input_by_id('input.root').conn_pollers[0].options.requests.once.combine(requests.once)
+        //   this.$options.pipelines['input.root'].get_input_by_id('input.root').conn_pollers[0].fireEvent('onOnceRequestsUpdated')
+        // }
+        //
+        // if (requests.periodical) {
+        //   this.$options.pipelines['input.root'].get_input_by_id('input.root').conn_pollers[0].options.requests.periodical.combine(requests.periodical)
+        //   this.$options.pipelines['input.root'].get_input_by_id('input.root').conn_pollers[0].fireEvent('onPeriodicalRequestsUpdated')
+        // }
+      } else {
+        let template = Object.clone(RootPipeline)
 
-      let pipeline_id = template.input[0].poll.id
+        let pipeline_id = template.input[0].poll.id
 
-      template.input[0].poll.conn[0].requests = this.__components_sources_to_requests(this.components)
+        template.input[0].poll.conn[0].requests = this.__components_sources_to_requests(this.components)
 
-      let pipe = new Pipeline(template)
+        let pipe = new Pipeline(template)
 
-      this.$options.__pipelines_cfg[pipeline_id] = {
-        ids: [],
-        connected: [],
-        suspended: pipe.inputs.every(function (input) { return input.options.suspended }, this)
+        this.$options.__pipelines_cfg[pipeline_id] = {
+          ids: [],
+          connected: [],
+          suspended: pipe.inputs.every(function (input) { return input.options.suspended }, this)
+        }
+
+        // this.__after_connect_inputs(
+        //   pipe,
+        //   this.$options.__pipelines_cfg[pipeline_id],
+        //   this.__resume_pipeline.pass([pipe, this.$options.__pipelines_cfg[pipeline_id], this.id, function () {
+        //     debug('__resume_pipeline CALLBACK')
+        //     pipe.fireEvent('onOnce')
+        //   }], this)
+        // )
+
+        this.$options.pipelines[pipeline_id] = pipe
+
+        debug('create_pipelines %o', this.$options.pipelines)
+
+        if (next) { next() }
       }
-
-      this.__after_connect_inputs(
-        pipe,
-        this.$options.__pipelines_cfg[pipeline_id],
-        this.__resume_pipeline.pass([pipe, this.$options.__pipelines_cfg[pipeline_id], this.id, function () {
-          debug('__resume_pipeline CALLBACK')
-          pipe.fireEvent('onOnce')
-        }], this)
-      )
-
-      this.$options.pipelines[pipeline_id] = pipe
-
-      if (next) { next() }
     }
 
     /**
