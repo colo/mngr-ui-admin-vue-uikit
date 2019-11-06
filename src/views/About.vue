@@ -14,7 +14,7 @@ import * as Debug from 'debug'
 const debug = Debug('apps:about')
 
 import Pipeline from 'js-pipeline'
-import RootPipeline from '../pipelines/index'
+import RootPipeline from '@apps/root/pipelines/index'
 
 import DataSourcesMixin from '@components/mixins/dataSources'
 

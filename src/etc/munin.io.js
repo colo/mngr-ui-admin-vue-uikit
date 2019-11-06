@@ -1,6 +1,1 @@
-'use strict'
-const App = require('node-app-socket.io-client/index')
-import DefaultConn from '@etc/default.io'
-
-let _app = new App(Object.merge(DefaultConn, { path: '/' }))
-export default _app.io
+../apps/munin/etc/munin.io.js
