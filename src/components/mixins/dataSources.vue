@@ -21,6 +21,7 @@ export default {
 
   pipelines: {},
   __pipelines_cfg: {},
+  unwatch_store: undefined,
 
   ON_PIPELINE_READY: 'onPipelineReady',
 
@@ -46,7 +47,7 @@ export default {
   },
   created: function () {
     debug('created')
-    EventBus.$on(this.path, this.__process_data.bind(this))
+    EventBus.$on(this.path, this.__process_input_data.bind(this))
 
     if (this.store) this.__register_store_module(this.path, sourceStore)
     this.__bind_components_to_sources(this.components)
@@ -148,19 +149,32 @@ export default {
       let callback
 
       for (const type in source) {
-        for (const req_type in source[type]) {
-          let reqs = source[type][req_type]
+        if (type === 'store') {
+          let reqs = source[type]
           if (!Array.isArray(reqs)) reqs = [reqs]
 
           for (let i = 0; i < reqs.length; i++) {
             let _key = this.__query_to_key(reqs[i].params)
-            // if(Array.isArray(_key) && _key.indexOf(key) > -1 ){
-            //   let index = _key.indexOf(key)
-            // }
-            // else
             if (_key === key || (Array.isArray(_key) && _key.indexOf(key) > -1)) {
               debug('__get_source_callback_from_key', reqs[i])
               callback = reqs[i].callback
+            }
+          }
+        } else {
+          for (const req_type in source[type]) {
+            let reqs = source[type][req_type]
+            if (!Array.isArray(reqs)) reqs = [reqs]
+
+            for (let i = 0; i < reqs.length; i++) {
+              let _key = this.__query_to_key(reqs[i].params)
+              // if(Array.isArray(_key) && _key.indexOf(key) > -1 ){
+              //   let index = _key.indexOf(key)
+              // }
+              // else
+              if (_key === key || (Array.isArray(_key) && _key.indexOf(key) > -1)) {
+                debug('__get_source_callback_from_key', reqs[i])
+                callback = reqs[i].callback
+              }
             }
           }
         }
@@ -168,25 +182,48 @@ export default {
 
       return callback
     },
-    __source_to_keys: function (source) {
+    __source_to_keys: function (source, input) {
+      debug('__source_to_keys %s', input)
+      input = input || 'requests'
       let keys = []
       for (const type in source) {
-        for (const req_type in source[type]) {
-          let reqs = source[type][req_type]
-          if (!Array.isArray(reqs)) reqs = [reqs]
+        if (type === input) {
+          if (type === 'store') {
+            let reqs = source[type]
+            if (!Array.isArray(reqs)) reqs = [reqs]
 
-          for (let i = 0; i < reqs.length; i++) {
-            let key = this.__query_to_key(reqs[i].params)
-            if (Array.isArray(key)) {
-              Array.each(key, function (_key) {
-                keys.push(_key)
-              })
-            } else {
-              keys.push(key)
+            debug('__source_to_keys STORE %o', reqs)
+
+            for (let i = 0; i < reqs.length; i++) {
+              let key = this.__query_to_key(reqs[i].params)
+              if (Array.isArray(key)) {
+                Array.each(key, function (_key) {
+                  keys.push(_key)
+                })
+              } else {
+                keys.push(key)
+              }
+            }
+          } else {
+            for (const req_type in source[type]) {
+              let reqs = source[type][req_type]
+              if (!Array.isArray(reqs)) reqs = [reqs]
+
+              for (let i = 0; i < reqs.length; i++) {
+                let key = this.__query_to_key(reqs[i].params)
+                if (Array.isArray(key)) {
+                  Array.each(key, function (_key) {
+                    keys.push(_key)
+                  })
+                } else {
+                  keys.push(key)
+                }
+              }
             }
           }
         }
       }
+
       debug('__source_to_keys', keys)
       return keys
     },
@@ -215,35 +252,45 @@ export default {
       // this.$store.commit(this.id + '_sources/add', { id: 'periodical?register=periodical&transformation=limit%3A30000', data: { range: [] } })
 
       // this.$store.watch((state) => state[this.id + '_sources']['periodical?register=periodical&transformation=limit%3A30000'], (val, oldVal) => {
-      //   // if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000']) { this.$set(this.components_data, 'periodical?register=periodical&transformation=limit%3A30000', {}) }
-      //
-      //   debug('watcher', val)
-      //   if (val['range']) {
-      //     for (const index in val['range']) {
-      //       this.$set(this.components['6'][0].options.range, index, val['range'][index])
-      //     }
-      //   }
-      //   // for (const key in val) {
-      //   //   if (Array.isArray(val[key])) {
-      //   //     // if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key]) this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, null)
-      //   //     for (const i in val[key]) {
-      //   //       if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key]) this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, [])
-      //   //       this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key], i, val[key][i])
-      //   //     }
-      //   //   } else {
-      //   //     this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, val[key])
-      //   //   }
-      //   // }
-      //   // this.$set(this.components_data, 'periodical?register=periodical&transformation=limit%3A30000', val)
-      //   // this.$set(this.MyRange, 0, val.range[0])
-      //   // this.$set(this.MyRange, 1, val.range[1])
-      // })
+      this.$options.unwatch_store = this.$store.watch((state) => state[this.id + '_sources'], (val, oldVal) => {
+        debug('$store watch %o', val)
+        Object.each(val, function (payload, id) {
+          this.__process_data(payload, 'store')
+        }.bind(this))
+        //   // if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000']) { this.$set(this.components_data, 'periodical?register=periodical&transformation=limit%3A30000', {}) }
+        //
+        //   debug('watcher', val)
+        //   if (val['range']) {
+        //     for (const index in val['range']) {
+        //       this.$set(this.components['6'][0].options.range, index, val['range'][index])
+        //     }
+        //   }
+        //   // for (const key in val) {
+        //   //   if (Array.isArray(val[key])) {
+        //   //     // if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key]) this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, null)
+        //   //     for (const i in val[key]) {
+        //   //       if (!this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key]) this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, [])
+        //   //       this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'][key], i, val[key][i])
+        //   //     }
+        //   //   } else {
+        //   //     this.$set(this.components_data['periodical?register=periodical&transformation=limit%3A30000'], key, val[key])
+        //   //   }
+        //   // }
+        //   // this.$set(this.components_data, 'periodical?register=periodical&transformation=limit%3A30000', val)
+        //   // this.$set(this.MyRange, 0, val.range[0])
+        //   // this.$set(this.MyRange, 1, val.range[1])
+      }, {
+        deep: true
+      })
     },
     __unregister_store_module: function (id) {
       debug('__unregister_store_module', id)
 
       if (!process.env.DEV) {
         if (id && this.$store.state[id + '_sources']) {
+          if (this.$options.unwatch_store) {
+            this.$options.unwatch_store()
+          }
           this.$store.unregisterModule(id + '_sources')
         }
       }
@@ -254,35 +301,40 @@ export default {
     **/
     create_pipelines: function (next) {
     },
-    __process_data: function (payload) {
-      debug('__process_data', payload)
+    __process_input_data: function (payload) {
+      debug('__process_input_data', payload)
       // for (const key in payload.data) {
       //   this.$store.commit(this.id + '_sources/append', { id: payload.id, key: key, data: payload.data[key] })
       // }
       if (this.store) {
         this.$store.commit(this.path + '_sources/add', payload)
-      } else {
-        let key = payload.id
-        // convert to array of array so it can be pass as parameter
-        // if (Array.isArray(payload.data)) payload.data = [payload.data]
+      }
+      // else {
+      this.__process_data(payload, 'requests')
+      // }
+    },
+    __process_data: function (payload, type) {
+      type = type || 'requests'
+      let key = payload.id
+      // convert to array of array so it can be pass as parameter
+      // if (Array.isArray(payload.data)) payload.data = [payload.data]
 
-        for (const prop in this.components) {
-          let components = this.components[prop]
-          // if (!Array.isArray(components)) components = [components]
+      for (const prop in this.components) {
+        let components = this.components[prop]
+        // if (!Array.isArray(components)) components = [components]
 
-          if (Array.isArray(components)) {
-            for (let index = 0; index < components.length; index++) {
-              if (
-                components[index].source &&
-                this.__source_to_keys(components[index].source).contains(key)
-              ) {
-                this.__update_component_data(components[index], key, payload)
-              }
+        if (Array.isArray(components)) {
+          for (let index = 0; index < components.length; index++) {
+            if (
+              components[index].source &&
+              this.__source_to_keys(components[index].source, type).contains(key)
+            ) {
+              this.__update_component_data(components[index], key, payload)
             }
-          } else {
-            if (components.source && this.__source_to_keys(components.source).contains(key)) {
-              this.__update_component_data(components, key, payload)
-            }
+          }
+        } else {
+          if (components.source && this.__source_to_keys(components.source, type).contains(key)) {
+            this.__update_component_data(components, key, payload)
           }
         }
       }

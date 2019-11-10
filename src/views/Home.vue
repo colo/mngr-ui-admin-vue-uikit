@@ -21,12 +21,6 @@ export default {
   mixins: [DataSourcesMixin],
 
   name: 'home',
-  // components: {
-  //   HelloWorld
-  // }
-
-  pipelines: {},
-  __pipelines_cfg: {},
   data () {
     return {
       height: '0px',
@@ -34,37 +28,64 @@ export default {
       /**
       * dataSources
       **/
-      store: false,
+      store: true,
 
       id: 'all',
       path: 'all',
 
       components: {
-        'all': [{
-          source: {
-            requests: {
-              periodical: [{
-                params: {
-                  path: 'all',
-                  query: {
-                    'from': 'educativa',
-                    'index': 'host',
-                    'filter': [
-                      "r.row('metadata')('tag').contains('enabled').and('nginx').and('vhost')",
-                      "r.row('data')('code').gt(399)",
-                      "r.row('metadata')('path').eq('educativa.checks.vhosts')",
-                      "r.row('metadata')('type').eq('check')",
-                      "r.row('metadata')('host').eq('colo')"
-                    ]
+        'all': [
+          {
+            source: {
+              requests: {
+                periodical: [{
+                  params: {
+                    path: 'all',
+                    query: {
+                      'from': 'educativa',
+                      'index': 'host',
+                      'filter': [
+                        "r.row('metadata')('tag').contains('enabled').and('nginx').and('vhost')",
+                        "r.row('data')('code').gt(399)",
+                        "r.row('metadata')('path').eq('educativa.checks.vhosts')",
+                        "r.row('metadata')('type').eq('check')",
+                        "r.row('metadata')('host').eq('colo')"
+                      ]
+                    }
+                  },
+                  callback: function (tables, metadata, key, vm) {
+                    debug('All callback', tables, vm.$options.grid_template)
                   }
-                },
-                callback: function (tables, metadata, key, vm) {
-                  debug('All callback', tables, vm.$options.grid_template)
+                }]
+              }
+            }
+          },
+          {
+            source: {
+              store: [
+                {
+                  params: {
+                    path: 'all',
+                    query: {
+                      'from': 'educativa',
+                      'index': 'host',
+                      'filter': [
+                        "r.row('metadata')('tag').contains('enabled').and('nginx').and('vhost')",
+                        "r.row('data')('code').gt(399)",
+                        "r.row('metadata')('path').eq('educativa.checks.vhosts')",
+                        "r.row('metadata')('type').eq('check')",
+                        "r.row('metadata')('host').eq('colo')"
+                      ]
+                    }
+                  },
+                  callback: function (tables, metadata, key, vm) {
+                    debug('STORE callback', tables, vm.$options.grid_template)
+                  }
                 }
-              }]
+              ]
             }
           }
-        }]
+        ]
       }
     }
   },
