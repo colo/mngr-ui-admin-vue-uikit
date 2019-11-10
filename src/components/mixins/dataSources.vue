@@ -306,7 +306,7 @@ export default {
       // for (const key in payload.data) {
       //   this.$store.commit(this.id + '_sources/append', { id: payload.id, key: key, data: payload.data[key] })
       // }
-      if (this.store) {
+      if (this.store === true) {
         this.$store.commit(this.path + '_sources/add', payload)
       }
       // else {
