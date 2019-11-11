@@ -34,8 +34,8 @@ export default {
   data () {
     return {
       // id: undefined,
-      store: false
-
+      store: false,
+      pipeline_id: undefined
     }
   },
 
@@ -480,28 +480,32 @@ export default {
     },
 
     suspend_pipelines: function () {
-      debug('suspend_pipelines')
+      debug('suspend_pipelines %s', this.pipeline_id)
 
       Object.each(this.$options.pipelines, function (pipe, id) { // destroy old ones
-        pipe.fireEvent('onSuspend')
-        // pipe.fireEvent('onExit')
-        // pipe.removeEvents()
-        //
-        // delete this.$options.pipelines[id]
-      })
+        if (id === this.pipeline_id) {
+          pipe.fireEvent('onSuspend')
+          // pipe.fireEvent('onExit')
+          // pipe.removeEvents()
+          //
+          // delete this.$options.pipelines[id]
+        }
+      }.bind(this))
 
       debug('suspend_pipelines', this.$options.pipelines)
     },
     resume_pipelines: function () {
-      debug('resume_pipelines')
+      debug('resume_pipelines %s', this.pipeline_id)
 
       Object.each(this.$options.pipelines, function (pipe, id) { // destroy old ones
-        pipe.fireEvent('onResume')
-        // pipe.fireEvent('onExit')
-        // pipe.removeEvents()
-        //
-        // delete this.$options.pipelines[id]
-      })
+        if (id === this.pipeline_id) {
+          pipe.fireEvent('onResume')
+          // pipe.fireEvent('onExit')
+          // pipe.removeEvents()
+          //
+          // delete this.$options.pipelines[id]
+        }
+      }.bind(this))
 
       debug('resume_pipelines', this.$options.pipelines)
     },
